@@ -13,15 +13,6 @@
   ##### Wiring is done according the the schematics in the file
   ########################################*/
 
-/* TO DO :
- *  - Test the load cell for gain value
- *  - Complete the function to read distance (Output)
- *  - Create a function to read load
- *  - Create a init setup for the motor
- *  - Define tests (speed, stop at max stress, etc...)
- *  - Add python interfacing to collect and compile the data
- */
-
 
 ////// Load Cell Variables
 HX711 loadcell;
