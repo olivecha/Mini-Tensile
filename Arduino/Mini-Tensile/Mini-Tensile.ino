@@ -28,6 +28,8 @@ long tareValue;                         //Variable to store the tare value
 ////// Ultrasonic distance sensor variables
 long duration;                          // variable for the duration of sound travel
 int distance;                           // variable for the distance measurement
+long sample_len;                        // Length measured for unstrained sample
+long strain;                            // Strain mesured by the load cell
 const int HCSR04_ECHO_PIN = 2;          //Input pin to echo of HC-SR04
 const int HCSRO4_TRIG_PIN = 3;          //Output pin to trig of HC-SR04
 
@@ -36,6 +38,8 @@ const int STEP_DIR_PIN = 6;             //Output pin for steper direction
 const int STEP_ROT_PIN = 7;             //Output pin for steper rotation
 int nb_ropes;                          //Number of ropes used in the pulley setup
 long lin_speed;                          //Linear test speed (mm/min)  
+long force;                              // Force measured by the load cell
+
 
 
 
@@ -47,7 +51,7 @@ void setup() {
   // Ultrasonic distance sensor
   pinMode(HCSRO4_TRIG_PIN, OUTPUT); // Sets the trigPin as an OUTPUT
   pinMode(HCSR04_ECHO_PIN, INPUT);  // Sets the echoPin as an INPUT
-  // ****** read the initial distance to compute the strain 
+  sample_len = initial_length();    // mesure the length of the sample 
 
   // Steper motor
   pinMode(STEP_DIR_PIN, OUTPUT);     // Sets the direction pin as OUTPUT
@@ -70,8 +74,13 @@ void loop() {
   stepper_rotate();
 
   //Read the distance
-  read_distance();
+ long strain = read_strain1(sample_len);
 
+  //Read the force
+
+  //Write a data point
+  send_results(force, strain);
+  
 }
 
 
@@ -80,6 +89,12 @@ void stepper_rotate(){
   digitalWrite(STEP_ROT_PIN, LOW);
   digitalWrite(STEP_ROT_PIN, HIGH);
   delayMicroseconds(step_delay);
+}
+
+void send_results(long force, long strain) {
+  long result = (char)force.concat(" ");
+  result.concat((char)strain;
+  Serial.println(result);
 }
 
 long stepper_delay(int nb_ropes,long lin_speed) {
@@ -92,7 +107,22 @@ long stepper_delay(int nb_ropes,long lin_speed) {
   return step_minutes/(60*1000000);  //Delay in microseconds between steps
 }
 
-void read_distance() {
+long initial_length() {
+      // Clears the trigPin condition
+  digitalWrite(HCSRO4_TRIG_PIN, LOW);
+  delayMicroseconds(2);
+    // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+  digitalWrite(HCSRO4_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(HCSRO4_TRIG_PIN, LOW);
+    // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
+  sample_len = duration * 0.0034 / 2; // Speed of sound wave divided by 2 (go and back)
+  return sample_len;
+}
+
+
+long read_strain1(long sample_len) {
     // Clears the trigPin condition
   digitalWrite(HCSRO4_TRIG_PIN, LOW);
   delayMicroseconds(2);
@@ -104,10 +134,8 @@ void read_distance() {
   duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
   // Calculating the distance
   distance = duration * 0.0034 / 2; // Speed of sound wave divided by 2 (go and back)
-  // Displays the distance on the Serial Monitor
-  Serial.print("Distance: ");
-  Serial.print(distance);
-  Serial.println(" mm");
+  return distance/sample_len;
+
 }
 
 
