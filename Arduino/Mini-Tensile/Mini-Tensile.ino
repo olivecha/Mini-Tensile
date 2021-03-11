@@ -9,7 +9,7 @@
   ##### Tabas Ilyass, Lengaigne Jacques, Toupin-Guay Valérie, Chabot Olivier
   ##### 26.02.2021
   ##### Libraries:
-  ##### HX711 by aguegu: https://github.com/aguegu/ardulibs/tree/master/hx711
+  ##### HX711 by bogde: https://github.com/bogde/HX711/tree/master/
   ##### Wiring is done according the the schematics in the file
   ########################################*/
 
@@ -23,7 +23,6 @@ float measuringIntervall = 2;           //Measuring interval when IDLE
 float measuringIntervallTest = .5;      //Measuring interval during SLOW test
 float measuringIntervallTestFast = .15; //Measuring interval during FAST test
 long tareValue;                         //Variable to store the tare value
-
 
 ////// Ultrasonic distance sensor variables
 long duration;                          // variable for the duration of sound travel
@@ -39,9 +38,6 @@ const int STEP_ROT_PIN = 7;             //Output pin for steper rotation
 int nb_ropes;                          //Number of ropes used in the pulley setup
 long lin_speed;                          //Linear test speed (mm/min)  
 long force;                              // Force measured by the load cell
-
-
-
 
 
 void setup() {
