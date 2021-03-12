@@ -46,6 +46,8 @@ void stepper_rotate();
 
 long read_strain1(long len);
 
+void send_results(long force_r, long strain);
+
 long stepper_delay(int ropes, long speed);
 
 void setup() {
@@ -61,17 +63,15 @@ void setup() {
     pinMode(STEP_DIR_PIN, OUTPUT);     // Sets the direction pin as OUTPUT
     pinMode(STEP_ROT_PIN, OUTPUT);     // Sets the rotation pin as OUTPUT
 
-
     // Load cell
     loadcell.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+    loadcell.set_gain(128);  // Value to determine in future
+
     // *************
     // Add process to create tension in the rope before tare
     // *************
     tareValue = loadcell.read_average(32);
-
 }
-
-
 
 void loop() {
     // Make the motor turn
@@ -81,10 +81,21 @@ void loop() {
     strain = read_strain1(sample_len);
 
     //Read the force
-
+    force  = read_force(tareValue);
     //Write a data point
     send_results(force, strain);
+}
 
+long read_force(long tare) {
+    force = loadcell.read_average(10) - tare;
+    return force;
+}
+
+void send_results(long f, long s){
+    Serial.println(f);
+    Serial.print(',');
+    Serial.print(s);
+    Serial.println();
 }
 
 long read_strain1(long len) {
@@ -110,7 +121,7 @@ void stepper_rotate(){
     delayMicroseconds(step_delay);
 }
 
-long stepper_delay(int ropes, double speed) {
+long stepper_delay(int ropes, long speed) {
     // Computes the motor delay between steps
     double step_angle = 1.8;      //degrees per step
     double motor_pulley_dia = 20; //diameter of the motor pulley (mm)
@@ -119,13 +130,6 @@ long stepper_delay(int ropes, double speed) {
     long step_minutes = RPM_motor*(360/step_angle);
     return step_minutes/(60*1000000);  //Delay in microseconds between steps
 }
-
-void send_results(long force, long strain) {
-    long result = (char)force.concat(" ");
-    result.concat((char)strain;
-    Serial.println(result);
-}
-
 
 long initial_length() {
     // Clears the trigPin condition
@@ -142,7 +146,3 @@ long initial_length() {
 }
 
 
-long read_strain1(sample_len) {
-
-
-}
