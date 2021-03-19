@@ -27,8 +27,8 @@ long tareValue;                         //Variable to store the tare value
 ////// Ultrasonic distance sensor variables
 long duration;                          // variable for the duration of sound travel
 int distance;                           // variable for the distance measurement
-long sample_len;                        // Length measured for unstrained sample
-long strain;                            // Strain mesured by the load cell
+double sample_len;                        // Length measured for unstrained sample
+double strain;                            // Strain mesured by the load cell
 const int HCSR04_ECHO_PIN = 2;          //Input pin to echo of HC-SR04
 const int HCSRO4_TRIG_PIN = 3;          //Output pin to trig of HC-SR04
 
@@ -40,15 +40,17 @@ long lin_speed;                          //Linear test speed (mm/min)
 long force;                              // Force measured by the load cell
 
 ////// Initiate the functions namespaces
-long initial_length();
 void stepper_rotate();
-
-
-long read_strain1(long len);
 
 void send_results(long force_r, long strain);
 
 long stepper_delay(int ropes, long speed);
+
+void send_strain(long strain);
+
+double initial_length(double n);
+
+double read_strain1(double len);
 
 void setup() {
 
@@ -57,48 +59,58 @@ void setup() {
     // Ultrasonic distance sensor
     pinMode(HCSRO4_TRIG_PIN, OUTPUT); // Sets the trigPin as an OUTPUT
     pinMode(HCSR04_ECHO_PIN, INPUT);  // Sets the echoPin as an INPUT
-    sample_len = initial_length();    // mesure the length of the sample
+    sample_len = initial_length(10.0);    // measure the length of the sample
 
     // Steper motor
-    pinMode(STEP_DIR_PIN, OUTPUT);     // Sets the direction pin as OUTPUT
-    pinMode(STEP_ROT_PIN, OUTPUT);     // Sets the rotation pin as OUTPUT
+    //pinMode(STEP_DIR_PIN, OUTPUT);     // Sets the direction pin as OUTPUT
+    //pinMode(STEP_ROT_PIN, OUTPUT);     // Sets the rotation pin as OUTPUT
 
     // Load cell
-    loadcell.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-    loadcell.set_gain(128);  // Value to determine in future
+    //loadcell.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+    //loadcell.set_gain(128);  // Value to determine in future
 
     // *************
     // Add process to create tension in the rope before tare
     // *************
-    tareValue = loadcell.read_average(32);
+    //tareValue = loadcell.read_average(32);
 }
+
+double initial_length(double n) {
+    int i;
+    float sum=0;
+    for (i = 0; i<=n; i++){
+        // Clears the trigPin condition
+        digitalWrite(HCSRO4_TRIG_PIN, LOW);
+        delayMicroseconds(2);
+        // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+        digitalWrite(HCSRO4_TRIG_PIN, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(HCSRO4_TRIG_PIN, LOW);
+        // Reads the echoPin, returns the sound wave travel time in microseconds
+        duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
+        sample_len = duration * 0.34 / 2; // Speed of sound wave divided by 2 (go and back)
+        sum += sample_len;
+        }
+    return sum/n;
+}
+
 
 void loop() {
     // Make the motor turn
-    stepper_rotate();
+    //stepper_rotate();
 
     //Read the distance
     strain = read_strain1(sample_len);
-
+    Serial.println(strain);
     //Read the force
-    force  = read_force(tareValue);
+    //force  = read_force(tareValue);
     //Write a data point
-    send_results(force, strain);
+    //send_results(force, strain);
+    // Test for distance sensor
+
 }
 
-long read_force(long tare) {
-    force = loadcell.read_average(10) - tare;
-    return force;
-}
-
-void send_results(long f, long s){
-    Serial.println(f);
-    Serial.print(',');
-    Serial.print(s);
-    Serial.println();
-}
-
-long read_strain1(long len) {
+double read_strain1(double len) {
     // Clears the trigPin condition
     digitalWrite(HCSRO4_TRIG_PIN, LOW);
     delayMicroseconds(2);
@@ -109,8 +121,21 @@ long read_strain1(long len) {
     // Reads the echoPin, returns the sound wave travel time in microseconds
     duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
     // Calculating the distance
-    distance = duration * 0.0034 / 2; // Speed of sound wave divided by 2 (go and back)
-    return distance/len;
+    distance = duration * 0.34 / 2; // Speed of sound wave divided by 2 (go and back)
+    return (distance - len)/len;
+}
+
+
+long read_force(long tare) {
+    force = loadcell.read_average(10) - tare;
+    return force;
+}
+
+void send_results(long f, long s){
+    Serial.print(f);
+    Serial.print(',');
+    Serial.print(s);
+    Serial.println();
 }
 
 
@@ -131,18 +156,5 @@ long stepper_delay(int ropes, long speed) {
     return step_minutes/(60*1000000);  //Delay in microseconds between steps
 }
 
-long initial_length() {
-    // Clears the trigPin condition
-    digitalWrite(HCSRO4_TRIG_PIN, LOW);
-    delayMicroseconds(2);
-    // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
-    digitalWrite(HCSRO4_TRIG_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(HCSRO4_TRIG_PIN, LOW);
-    // Reads the echoPin, returns the sound wave travel time in microseconds
-    duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
-    sample_len = duration * 0.0034 / 2; // Speed of sound wave divided by 2 (go and back)
-    return sample_len;
-}
 
 
