@@ -1,0 +1,183 @@
+#include <Arduino.h>
+#include <HX711.h>
+#include <Wire.h>
+
+/*########################################
+  ##### Mini-Tensile
+  ##### Mini tensile load testing machine
+  ##### V0
+  ##### École de Technologie Supérieure
+  ##### Tabas Ilyass, Lengaigne Jacques, Toupin-Guay Valérie, Chabot Olivier
+  ##### 26.02.2021
+  ##### Libraries:
+  ##### HX711 by bogde: https://github.com/bogde/HX711/tree/master/
+  ##### Wiring is done according the the schematics in the file
+  ########################################*/
+
+
+////// Load Cell Variables
+HX711 loadcell;
+uint8_t dataPin = 6;
+uint8_t clockPin = 7;        //Input pin for the load cell ADC
+float calbration_factor = 1;                    //Calibration factor (To be determined)
+double force;
+
+////// Ultrasonic distance sensor variables
+long duration;                          // variable for the duration of sound travel
+int distance;                           // variable for the distance measurement
+double sample_len;                        // Length measured for unstrained sample
+double strain;                            // Strain mesured by the load cell
+const int HCSR04_ECHO_PIN = 4;          //Input pin to echo of HC-SR04
+const int HCSRO4_TRIG_PIN = 5;          //Output pin to trig of HC-SR04
+
+////// I2C protocol
+int motor_instruction = 0;
+
+////// Initiate the functions namespaces
+
+void double_print(double val1, double val2);
+
+double initial_length(double n) {
+    int i;
+    float sum=0;
+    for (i = 0; i<=n; i++){
+        // Clears the trigPin condition
+        digitalWrite(HCSRO4_TRIG_PIN, LOW);
+        delayMicroseconds(2);
+        // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+        digitalWrite(HCSRO4_TRIG_PIN, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(HCSRO4_TRIG_PIN, LOW);
+        // Reads the echoPin, returns the sound wave travel time in microseconds
+        duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
+        sample_len = duration * 0.34 / 2; // Speed of sound wave divided by 2 (go and back)
+        sum += sample_len;
+    }
+    return sum/n;
+}
+
+double read_strain1(double len);
+
+
+
+void setup() {
+
+    // Begin serial communication
+    Serial.begin(115200);
+
+    // Begin IC2 communication
+    Wire.begin();
+
+    // Ultrasonic distance sensor
+    pinMode(HCSRO4_TRIG_PIN, OUTPUT); // Sets the trigPin as an OUTPUT
+    pinMode(HCSR04_ECHO_PIN, INPUT);  // Sets the echoPin as an INPUT
+    Serial.println("Calculating initial length");
+    sample_len = initial_length(10.0);    // measure the length of the sample
+    Serial.println("Done !");
+
+    // Loadcell
+    //loadcell.begin(dataPin, clockPin);
+    //loadcell.set_scale(-420.0983);  // Set with the right units in the lab
+    //loadcell.tare();
+    //Serial.println("Setup done test will start in 1 sec");
+    //delay(1000);
+
+
+
+}
+
+
+void loop() {
+
+    Wire.beginTransmission(9); // transmit to device #9
+    Wire.write(motor_instruction);              // sends x
+    Wire.endTransmission();    // stop transmitting
+    Serial.println("Motor spinning");
+    delay(10000);
+
+    motor_instruction = 3;
+    Wire.beginTransmission(9); // transmit to device #9
+    Wire.write(motor_instruction);              // sends x
+    Wire.endTransmission();    // stop transmitting
+    Serial.println("Motor not spinning");
+    delay(5000);
+
+
+    // Read the force
+    //force = loadcell.get_units();
+
+    // Read the strain
+    //strain = read_strain1(sample_len);
+
+    // Print the result
+    //double_print(strain, force);
+
+
+
+}
+
+void double_print(double val1, double val2) {
+    Serial.print(val1);
+    Serial.print(" ");
+    Serial.print(val2);
+    Serial.print("\n");
+}
+
+unsigned long read_pulse(const int pin) {
+    static unsigned long rising_time;  // time of the rising edge
+    static int last_state;             // previous pin state
+    int state = digitalRead(pin);      // current pin state
+    unsigned long pulse_length = 0;    // default return value
+
+    // On rising edge: record current time.
+    if (last_state == LOW && state == HIGH) {
+        rising_time = micros();
+    }
+
+    // On falling edge: report pulse length.
+    if (last_state == HIGH && state == LOW) {
+        unsigned long falling_time = micros();
+        pulse_length = falling_time - rising_time;
+    }
+
+    last_state = state;
+    return pulse_length;
+}
+
+double read_strain1(double len) {
+    // Clears the trigPin condition
+    digitalWrite(HCSRO4_TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+    digitalWrite(HCSRO4_TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(HCSRO4_TRIG_PIN, LOW);
+    // Reads the echoPin, returns the sound wave travel time in microseconds
+    duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
+    // Calculating the distance
+    distance = duration * 0.34 / 2; // Speed of sound wave divided by 2 (go and back)
+    return (distance - len)/len;
+}
+
+
+long read_force(long tare) {
+    force = loadcell.read_average(10) - tare;
+    return force;
+}
+
+void send_results(long f, long s){
+    Serial.print(f);
+    Serial.print(',');
+    Serial.print(s);
+    Serial.println();
+}
+
+long stepper_delay(int ropes, long speed) {
+    // Computes the motor delay between steps
+    double step_angle = 1.8;      //degrees per step
+    double motor_pulley_dia = 20; //diameter of the motor pulley (mm)
+    double pi = 3.1415926535;     //pi approximation
+    double RPM_motor = speed*ropes / (pi*motor_pulley_dia);
+    long step_minutes = RPM_motor*(360/step_angle);
+    return step_minutes/(60*1000000);  //Delay in microseconds between steps
+}

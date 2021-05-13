@@ -1,9 +1,9 @@
-import threading
+from threading import Thread
 import logging
 
 
 # We create a class that inherits from the python threading.Thread class
-class FastCounter(threading.Thread):
+class FastCounter(Thread):
 
     def __init__(self, args=()):
         # The following line executes the init code of the threading.Thread class

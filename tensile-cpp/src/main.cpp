@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <HX711.h>
+#include <Wire.h>
 
 /*########################################
   ##### Mini-Tensile
@@ -13,66 +14,31 @@
   ##### Wiring is done according the the schematics in the file
   ########################################*/
 
+////// Test variables
+int test = 0;
 
 ////// Load Cell Variables
 HX711 loadcell;
-const int LOADCELL_DOUT_PIN = 2;        //Output pin for the load cell ADC
-const int LOADCELL_SCK_PIN = 3;         //Input pin for the load cell ADC
-float gainValue = 1;                    //Calibration factor (To be determined)
-float measuringIntervall = 2;           //Measuring interval when IDLE
-float measuringIntervallTest = .5;      //Measuring interval during SLOW test
-float measuringIntervallTestFast = .15; //Measuring interval during FAST test
-long tareValue;                         //Variable to store the tare value
+uint8_t dataPin = 6;
+uint8_t clockPin = 7;        //Input pin for the load cell ADC
+float calbration_factor = 1;                    //Calibration factor (To be determined)
+double force;
 
 ////// Ultrasonic distance sensor variables
 long duration;                          // variable for the duration of sound travel
 int distance;                           // variable for the distance measurement
 double sample_len;                        // Length measured for unstrained sample
 double strain;                            // Strain mesured by the load cell
-const int HCSR04_ECHO_PIN = 2;          //Input pin to echo of HC-SR04
-const int HCSRO4_TRIG_PIN = 3;          //Output pin to trig of HC-SR04
-
-////// Stepper motor variables
-const int STEP_DIR_PIN = 6;             //Output pin for steper direction
-const int STEP_ROT_PIN = 7;             //Output pin for steper rotation
-int nb_ropes;                          //Number of ropes used in the pulley setup
-long lin_speed;                          //Linear test speed (mm/min)
-long force;                              // Force measured by the load cell
+const int HCSR04_ECHO_PIN = 4;          //Input pin to echo of HC-SR04
+const int HCSRO4_TRIG_PIN = 5;          //Output pin to trig of HC-SR04
 
 ////// Initiate the functions namespaces
-void stepper_rotate();
 
-void send_results(long force_r, long strain);
-
-long stepper_delay(int ropes, long speed);
-
-void send_strain(long strain);
-
-double initial_length(double n);
-
-double read_strain1(double len);
-
-void setup() {
-
-    Serial.begin(115200);
-
-    // Ultrasonic distance sensor
-    pinMode(HCSRO4_TRIG_PIN, OUTPUT); // Sets the trigPin as an OUTPUT
-    pinMode(HCSR04_ECHO_PIN, INPUT);  // Sets the echoPin as an INPUT
-    sample_len = initial_length(10.0);    // measure the length of the sample
-
-    // Steper motor
-    //pinMode(STEP_DIR_PIN, OUTPUT);     // Sets the direction pin as OUTPUT
-    //pinMode(STEP_ROT_PIN, OUTPUT);     // Sets the rotation pin as OUTPUT
-
-    // Load cell
-    //loadcell.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-    //loadcell.set_gain(128);  // Value to determine in future
-
-    // *************
-    // Add process to create tension in the rope before tare
-    // *************
-    //tareValue = loadcell.read_average(32);
+void double_print(double val1, double val2) {
+    Serial.print(val1);
+    Serial.print(" ");
+    Serial.print(val2);
+    Serial.print("\n");
 }
 
 double initial_length(double n) {
@@ -90,24 +56,8 @@ double initial_length(double n) {
         duration = pulseIn(HCSR04_ECHO_PIN, HIGH);
         sample_len = duration * 0.34 / 2; // Speed of sound wave divided by 2 (go and back)
         sum += sample_len;
-        }
+    }
     return sum/n;
-}
-
-
-void loop() {
-    // Make the motor turn
-    //stepper_rotate();
-
-    //Read the distance
-    strain = read_strain1(sample_len);
-    Serial.println(strain);
-    //Read the force
-    //force  = read_force(tareValue);
-    //Write a data point
-    //send_results(force, strain);
-    // Test for distance sensor
-
 }
 
 double read_strain1(double len) {
@@ -125,35 +75,61 @@ double read_strain1(double len) {
     return (distance - len)/len;
 }
 
-
-long read_force(long tare) {
-    force = loadcell.read_average(10) - tare;
-    return force;
-}
-
-void send_results(long f, long s){
-    Serial.print(f);
-    Serial.print(',');
-    Serial.print(s);
-    Serial.println();
+void spin_me_baby(int state) {
+    Wire.beginTransmission(9); // transmit to device #9
+    Wire.write(state);              // sends x
+    Wire.endTransmission();    // stop transmitting
 }
 
 
-void stepper_rotate(){
-    long step_delay = stepper_delay(nb_ropes, lin_speed); //Time to wait between rotations
-    digitalWrite(STEP_ROT_PIN, LOW);
-    digitalWrite(STEP_ROT_PIN, HIGH);
-    delayMicroseconds(step_delay);
+void setup() {
+
+    // Begin serial communication
+    Serial.begin(115200);
+
+    // Begin IC2 communication
+    Wire.begin();
+
+    // Set motor to not spinning
+    spin_me_baby(0);
+
+    // Ultrasonic distance sensor
+    pinMode(HCSRO4_TRIG_PIN, OUTPUT); // Sets the trigPin as an OUTPUT
+    pinMode(HCSR04_ECHO_PIN, INPUT);  // Sets the echoPin as an INPUT
+    Serial.println("Calculating initial length");
+    sample_len = initial_length(10.0);    // measure the length of the sample
+    Serial.println("Done !");
+
+    // Loadcell
+    loadcell.begin(dataPin, clockPin);
+    loadcell.set_scale(-420.0983);  // Set with the right units in the lab
+    loadcell.tare();
+    Serial.println("Setup done test will start in 3 sec");
+    delay(3000);
+
 }
 
-long stepper_delay(int ropes, long speed) {
-    // Computes the motor delay between steps
-    double step_angle = 1.8;      //degrees per step
-    double motor_pulley_dia = 20; //diameter of the motor pulley (mm)
-    double pi = 3.1415926535;     //pi approximation
-    double RPM_motor = speed*ropes / (pi*motor_pulley_dia);
-    long step_minutes = RPM_motor*(360/step_angle);
-    return step_minutes/(60*1000000);  //Delay in microseconds between steps
+
+void loop() {
+
+    if (test==0){
+        force = loadcell.get_units();
+        strain = read_strain1(sample_len);
+        double_print(strain, force);
+
+        Serial.println("Testing begin");
+        spin_me_baby(1);
+        while (force<1000) {
+            force = loadcell.get_units();
+            strain = read_strain1(sample_len);
+            double_print(strain, force);
+        }
+        spin_me_baby(0);
+        Serial.println("Testing done");
+        test = 1;
+
+    }
+    delay(1000);
 }
 
 

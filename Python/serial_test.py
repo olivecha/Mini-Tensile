@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 strPort = "/dev/cu.usbserial-1420"
 baud = 115200
 Arduino = serial.Serial(strPort, baud)
-maxLen = 1000
+maxLen = 300
 force = deque([0.0] * maxLen)
 position = deque([0.0] * maxLen)
 
 fig = plt.figure()
-ax = plt.axes(xlim=(-1, 3), ylim=(-10, 300))
+ax = plt.axes(xlim=(0, 3), ylim=(0, 300))
 plt.xlabel('allongement')
 plt.ylabel('force')
 line, = ax.plot([], [], lw=2, c='r')
