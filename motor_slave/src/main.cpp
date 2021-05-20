@@ -4,20 +4,36 @@
 /// Stepper motor variables
 const int STEP_DIR_PIN = 2;             //Output pin for steper direction
 const int STEP_ROT_PIN = 3;             //Output pin for steper rotation
-const int LED = 13;
 int nb_ropes = 4;                          //Number of ropes used in the pulley setup
 long lin_speed = 1000;                          //Linear test speed (mm/min)
+int nb_steps = 0;
 
 /// I2C communication
 int motor_instruction = 0;
 
 /// Functions
-void stepper_rotate() {
+void stepper_rotate(int delay) {
     //long step_delay = stepper_delay(nb_ropes, lin_speed); //Time to wait between rotations
     digitalWrite(STEP_ROT_PIN, LOW);
     digitalWrite(STEP_ROT_PIN, HIGH);
-    delayMicroseconds(2000);
+    delayMicroseconds(delay);
+    ++ nb_steps;
 }
+
+void stepper_rewind() {
+    // Change rotation direction
+    digitalWrite(STEP_DIR_PIN, LOW);
+    // Spin in reverse to come back to the initial position
+    while (nb_steps > 0) {
+        digitalWrite(STEP_ROT_PIN, LOW);
+        digitalWrite(STEP_ROT_PIN, HIGH);
+        delayMicroseconds(3000);
+        -- nb_steps;
+    }
+    // Come back to the original rotation direction
+    digitalWrite(STEP_DIR_PIN, HIGH);
+}
+
 long stepper_delay(int ropes, long speed) {
     // Computes the motor delay between steps
     double step_angle = 1.8;      //degrees per step
@@ -38,6 +54,7 @@ void setup() {
     pinMode(STEP_DIR_PIN, OUTPUT);
     pinMode(STEP_ROT_PIN, OUTPUT);
 
+
     /// I2C protocol
     // Start the I2C Bus as Slave on address 9
     Wire.begin(9);
@@ -49,7 +66,12 @@ void setup() {
 void loop() {
     // If value received is 0 rotate the motor
     if (motor_instruction == 1) {
-        stepper_rotate();
+        digitalWrite(STEP_DIR_PIN, HIGH);
+        stepper_rotate(10000);
+    }
+    if (motor_instruction == 2) {
+        digitalWrite(STEP_DIR_PIN, LOW);
+        stepper_rotate(2000);
     }
     //If value received is 3 stop the motor
     if (motor_instruction == 0) {

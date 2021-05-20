@@ -76,6 +76,10 @@ double read_strain1(double len) {
 }
 
 void spin_me_baby(int state) {
+    // state = 1 : go up
+    // state = 2 : go down
+    // state = 0 : chill
+
     Wire.beginTransmission(9); // transmit to device #9
     Wire.write(state);              // sends x
     Wire.endTransmission();    // stop transmitting
@@ -97,15 +101,15 @@ void setup() {
     pinMode(HCSRO4_TRIG_PIN, OUTPUT); // Sets the trigPin as an OUTPUT
     pinMode(HCSR04_ECHO_PIN, INPUT);  // Sets the echoPin as an INPUT
     Serial.println("Calculating initial length");
-    sample_len = initial_length(10.0);    // measure the length of the sample
+    sample_len = initial_length(100.0);    // measure the length of the sample
     Serial.println("Done !");
 
     // Loadcell
     loadcell.begin(dataPin, clockPin);
-    loadcell.set_scale(-420.0983);  // Set with the right units in the lab
+    loadcell.set_scale(40510/9.12437);  // F = 9.1243791 N
     loadcell.tare();
-    Serial.println("Setup done test will start in 3 sec");
-    delay(3000);
+    Serial.println("Setup done test will start in 10 sec");
+    delay(10000);
 
 }
 
@@ -116,13 +120,17 @@ void loop() {
         force = loadcell.get_units();
         strain = read_strain1(sample_len);
         double_print(strain, force);
-
         Serial.println("Testing begin");
         spin_me_baby(1);
-        while (force<1000) {
+        while (strain < 1 && force <60) {
             force = loadcell.get_units();
             strain = read_strain1(sample_len);
             double_print(strain, force);
+        }
+        spin_me_baby(2);
+        while (strain > 0){
+            strain = read_strain1(sample_len);
+            Serial.println(strain);
         }
         spin_me_baby(0);
         Serial.println("Testing done");
