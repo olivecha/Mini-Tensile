@@ -67,11 +67,11 @@ void loop() {
     // If value received is 0 rotate the motor
     if (motor_instruction == 1) {
         digitalWrite(STEP_DIR_PIN, HIGH);
-        stepper_rotate(10000);
+        stepper_rotate(500);
     }
     if (motor_instruction == 2) {
         digitalWrite(STEP_DIR_PIN, LOW);
-        stepper_rotate(2000);
+        stepper_rotate(200);
     }
     //If value received is 3 stop the motor
     if (motor_instruction == 0) {
