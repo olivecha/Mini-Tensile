@@ -197,9 +197,9 @@ void setup() {
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 
     // Delay to plug stuff
-    Serial.println("Setup done test will start in 1 sec");
+    Serial.println("Setup done");
     delay(1000);
-    Serial.println("Lets go !");
+    Serial.println("Press button to begin testing");
 }
 
 
@@ -215,8 +215,8 @@ void loop() {
         Serial.println("Test started");
 
         // Go up while the button is not pushed and the strain is below the top of the machine
-        while (button() == HIGH && strain < 1.4) {
-            strain = read_strain(sample_len);
+        while (button() == HIGH && strain < 550) {
+            strain = read_distance();
             force = loadcell.get_units();
             double_print(strain, force);
         }
