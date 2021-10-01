@@ -1,0 +1,3 @@
+width : 12.14 mm
+thick : 0.59 mm
+

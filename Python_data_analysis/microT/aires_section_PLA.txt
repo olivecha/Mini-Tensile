@@ -1,0 +1,11 @@
+Test1
+Largeur ; 6.24
+Épaisseur ; 1.91
+
+Test2
+Largeur ; 6.28
+Épaisseur ; 1.90
+
+Test3
+Largeur ; 6.23
+Épaisseur ; 1.89

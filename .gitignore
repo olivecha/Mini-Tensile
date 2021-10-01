@@ -134,3 +134,16 @@ dmypy.json
 # Mac hidden files
 .idea
 
+# Private files
+/Spending
+/Open-Pull-master
+/MicroTensile_media
+Python_data_analysis/Tests/Figures
+
+# Schematics binary
+Schema_Electrique
+
+# Weird .dds files from microTensile data
+*.dds
+
+
